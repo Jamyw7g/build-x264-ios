@@ -6,12 +6,19 @@ then
     exit 1
 fi
 
-cache_dir="${PWD}/build_tmp"
+cache_dir="${PWD}/build_cache"
 output_dir="$PWD"
 if [ ! -d "$cache_dir" ]
 then
     mkdir "$cache_dir" || exit 1
 fi
+
+function clean {
+    rm -rf "$cache_dir"
+    echo "Done"
+}
+
+trap clean SIGINT SIGTERM ERR EXIT
 
 PROJ_PATH="$1"
 cd "$PROJ_PATH" || exit 1
@@ -21,10 +28,6 @@ if [ "$branch" != "stable" ] && [ -z "$DEBUG" ]
 then
     echo "Please checkout stable branch or set DEBUG=1"
     exit 1
-fi
-if [ -n "$DEBUG" ]
-then
-    set -x
 fi
 
 CONFIGURE_FLAGS="--enable-static --enable-pic --disable-cli"
@@ -43,11 +46,11 @@ function build_bin {
     fi
 
     CC="xcrun -sdk iphoneos clang"
-    CFLAGS="-mios-version-min=11.0"
+    CFLAGS="-miphoneos-version-min=11.0"
     if [[ "$target" == "arm64-sim" ]] || [[ "$target" == "x86_64" ]]
     then
         CC="xcrun -sdk iphonesimulator clang"
-        CFLAGS="-mios-simulator-version-min=11.0" 
+        CFLAGS="-miphonesimulator-version-min=11.0" 
     fi
 
     if [[ "$target" =~ ^arm64.* ]]
@@ -126,4 +129,3 @@ done
 
 # shellcheck disable=SC2086
 xcodebuild -create-xcframework $cf_args -output "${output_dir}/X264.xcframework" || exit 1
-rm -rf "${cache_dir}"
