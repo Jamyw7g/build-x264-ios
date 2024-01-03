@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# die when fail
+set -e 
+
 if [ -z "$1" ] || [ ! -d "$1" ]
 then
     echo "Usage: $0 <project_path>"
@@ -10,19 +13,19 @@ cache_dir="${PWD}/build_cache"
 output_dir="$PWD"
 if [ ! -d "$cache_dir" ]
 then
-    mkdir "$cache_dir" || exit 1
+    mkdir "$cache_dir"
 fi
 
 function clean {
     rm -rf "$cache_dir"
-    echo "Done"
+    echo "cleanup cache"
 }
 
 trap clean SIGINT SIGTERM ERR EXIT
 
 PROJ_PATH="$1"
-cd "$PROJ_PATH" || exit 1
-branch=$(git rev-parse --abbrev-ref HEAD) || exit 1
+cd "$PROJ_PATH"
+branch=$(git rev-parse --abbrev-ref HEAD)
 
 if [ "$branch" != "stable" ] && [ -z "$DEBUG" ]
 then
@@ -68,10 +71,10 @@ function build_bin {
         --extra-cflags="$CFLAGS" \
         --extra-asflags="$ASFLAGS" \
         --extra-ldflags="$LDFLAGS" \
-        --prefix="$dst_dir" || exit 1
+        --prefix="$dst_dir"
     ncpu=$(sysctl -n hw.logicalcpu) || 8
-    make install -j "$ncpu" || exit 1
-    gen_header "$dst_dir" || exit 1
+    make install -j "$ncpu"
+    gen_header "$dst_dir"
 }
 
 function gen_header {
@@ -102,12 +105,12 @@ done
 sim_dir="${cache_dir}/sim"
 if [ ! -d "$sim_dir" ]
 then
-    mkdir "$sim_dir" || exit 1
+    mkdir "$sim_dir"
 fi
 sim_lib_dir="${sim_dir}/lib"
 if [ ! -d "$sim_lib_dir" ]
 then
-    mkdir "$sim_lib_dir" || exit 1
+    mkdir "$sim_lib_dir"
 fi
 
 lipo_args=""
@@ -116,9 +119,9 @@ do
     lipo_args="${lipo_args} ${cache_dir}/${target}/lib/libx264.a"
 done
 
-cp -a "${cache_dir}/arm64-sim/include" "${sim_dir}/include" || exit 1
+cp -a "${cache_dir}/arm64-sim/include" "${sim_dir}/include"
 # shellcheck disable=SC2086
-lipo -create $lipo_args -output "${sim_lib_dir}/libx264.a" || exit 1
+lipo -create $lipo_args -output "${sim_lib_dir}/libx264.a"
 
 cf_args=""
 dirs="arm64 sim"
@@ -128,4 +131,4 @@ do
 done
 
 # shellcheck disable=SC2086
-xcodebuild -create-xcframework $cf_args -output "${output_dir}/X264.xcframework" || exit 1
+xcodebuild -create-xcframework $cf_args -output "${output_dir}/X264.xcframework"
